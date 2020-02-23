@@ -6,8 +6,7 @@
 
 ```
 $ git clone https://github.com/yohji/secbox.git
-$ gem build secbox.gemspec
-$ sudo gem install ./secbox-XXX.gem
+$ bundle install
 ```
 
 ## Usage

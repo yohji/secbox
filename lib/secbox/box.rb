@@ -1,5 +1,5 @@
 #--
-#--   Copyright (c) 2020 Marco Merli <yohjimarcomerli.net>
+#--   Copyright (c) 2020 Marco Merli <yohji@marcomerli.net>
 #--
 #--   This program is free software; you can redistribute it and/or modify
 #--   it under the terms of the GNU Lesser General Public License as published by
@@ -17,36 +17,27 @@
 #--   or see <http://www.gnu.org/licenses/>
 #--
 
-require "logger"
-require "secbox/box"
-require "secbox/conf"
-require "secbox/sync"
-require "secbox/version"
-
 module SecBox
+	class Box
 
-	def SecBox.start
-		@conf = Conf.load
-		@log = Logger.new(Conf::LOG_F)
-		@log.level = @conf.log_level
-		@box = Box.new @conf.box
+		AGE_F = ".age"
+		STRUCT_F = ".struct"
+		LOCK_F = ".lock"
 
-		mutex = Mutex.new
-		sync = Sync.new mutex
-		sync.join
-	end
+		attr_reader :name, :path, :struct
 
-	def SecBox.box
-		@box
-	end
+		def initialize path
+			@path = path
+			@name = File.basename path
 
-	def SecBox.conf
-		@conf
-	end
+			unless File.exists? path
+				FileUtils.mkdir_p path
+				@struct = Array.new
 
-	def SecBox.log
-		@log
+				File.write(File.join(path, STRUCT_F), Marshal.dump(@struct))
+				File.write(File.join(path, AGE_F), Time.new.to_i)
+				SecBox.log.info "Created local box at '#{path}'"
+			end
+		end
 	end
 end
-
-SecBox.start

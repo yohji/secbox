@@ -1,5 +1,5 @@
 #--
-#--   Copyright (c) 2020 Marco Merli <yohjimarcomerli.net>
+#--   Copyright (c) 2020 Marco Merli <yohji@marcomerli.net>
 #--
 #--   This program is free software; you can redistribute it and/or modify
 #--   it under the terms of the GNU Lesser General Public License as published by
@@ -17,36 +17,32 @@
 #--   or see <http://www.gnu.org/licenses/>
 #--
 
-require "logger"
-require "secbox/box"
-require "secbox/conf"
-require "secbox/sync"
-require "secbox/version"
+require "yaml"
+require "fileutils"
 
 module SecBox
+	class Conf
 
-	def SecBox.start
-		@conf = Conf.load
-		@log = Logger.new(Conf::LOG_F)
-		@log.level = @conf.log_level
-		@box = Box.new @conf.box
+		HOME_D = File.join(ENV["HOME"], ".secbox")
+		CONF_F = File.join(HOME_D, "secbox.yaml")
+		LOG_F = File.join(HOME_D, "secbox.log")
 
-		mutex = Mutex.new
-		sync = Sync.new mutex
-		sync.join
-	end
+		def Conf.load
 
-	def SecBox.box
-		@box
-	end
+			if ! File.exists? CONF_F
+				FileUtils.mkdir_p HOME_D
+				File.write(CONF_F, YAML::dump(Conf.new))
+			end
 
-	def SecBox.conf
-		@conf
-	end
+			return YAML::load(File.read(CONF_F))
+		end
 
-	def SecBox.log
-		@log
+		attr_reader :box, :host, :port, :user, :keys, :log_level
+
+		def initialize
+			# TODO wizard for brand new configuration
+			@port = 22
+			@log_level = "ERROR"
+		end
 	end
 end
-
-SecBox.start

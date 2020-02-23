@@ -8,3 +8,5 @@ gem "rle"
 gem "net-ssh"
 gem "net-scp"
 gem "listen"
+
+gem "rake-notes"
