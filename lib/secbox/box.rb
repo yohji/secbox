@@ -24,20 +24,26 @@ module SecBox
 		STRUCT_F = ".struct"
 		LOCK_F = ".lock"
 
-		attr_reader :name, :path, :struct
+		attr_reader :name, :path, :age, :struct
 
 		def initialize path
 			@path = path
 			@name = File.basename path
+			@age_f = File.join(path, AGE_F)
+			@struct_f = File.join(path, STRUCT_F)
 
-			unless File.exists? path
-				FileUtils.mkdir_p path
-				@struct = Array.new
+			FileUtils.mkdir_p path unless File.exists? path
+			refresh
+		end
 
-				File.write(File.join(path, STRUCT_F), Marshal.dump(@struct))
-				File.write(File.join(path, AGE_F), Time.new.to_i)
-				SecBox.log.info "Created local box at '#{path}'"
-			end
+		def refresh
+			@struct = Dir.glob("#{@path}/**/*")
+			File.write(@struct_f, Marshal.dump(@struct))
+
+			@age = Time.new.to_i
+			File.write(@age_f, @age)
+
+			SecBox.log.info "Refresh local box at '#{@path}'"
 		end
 	end
 end

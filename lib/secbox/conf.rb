@@ -29,7 +29,7 @@ module SecBox
 
 		def Conf.load
 
-			if ! File.exists? CONF_F
+			unless File.exists? CONF_F
 				FileUtils.mkdir_p HOME_D
 				File.write(CONF_F, YAML::dump(Conf.new))
 			end
@@ -38,13 +38,13 @@ module SecBox
 		end
 
 		attr_reader :box, :host, :port, :user, \
-			:keys, :log_level, :remote_delay
+			:keys, :log_level, :remote_check
 
 		def initialize
 			# TODO: wizard for brand new configuration
 			@port = 22
 			@log_level = "ERROR"
-			@remote_delay = 45
+			@remote_check = 45
 		end
 	end
 end

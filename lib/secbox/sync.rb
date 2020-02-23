@@ -25,13 +25,13 @@ module SecBox
 	class RemoteSync < Thread
 
 		def initialize(mutex)
-			super(&method(:execute))
+			super(&method(:sync))
 			@mutex = mutex
 		end
 
 		private
 
-		def execute
+		def sync
 			box = SecBox.box
 			setup = false
 
@@ -51,15 +51,15 @@ module SecBox
 					end
 				end
 
-				sleep SecBox.conf.remote_delay
+				sleep SecBox.conf.remote_check
 			end
 		end
 
 		def setup_box ssh, box
 			@r_box = "/home/#{SecBox.conf.user}/#{box.name}"
 
-			unless ssh.exists? "#{box.name}"
-				ssh.invoke "mkdir #{@r_box}"
+			unless ssh.exists? "#{@r_box}"
+				ssh.mkdir "#{@r_box}"
 
 				Tempfile.create("secbox") do |tmp|
 					tmp.write Marshal.dump(Array.new)
@@ -80,19 +80,23 @@ module SecBox
 		attr_reader :changed, :removed
 
 		def initialize(mutex)
-			super(&method(:execute))
+			super(&method(:sync))
 			@mutex = mutex
 			@changed = Array.new
 			@removed = Array.new
 		end
 
+		def update
+			# TODO: update local - > remote
+		end
+
 		private
 
-		def execute
+		def sync
 			loop do
-				if ! (@changed.empty? & @removed.empty?)
+				if ! (@changed.empty? && @removed.empty?)
 					@mutex.synchronize do
-						# TODO sync local - > remote
+						# TODO: sync local - > remote
 						puts @changed.pop
 						puts @removed.pop
 					end

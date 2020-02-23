@@ -36,6 +36,7 @@ module SecBox
 		r_sync = RemoteSync.new mutex
 		r_sync.run
 		l_sync = LocalSync.new mutex
+		l_sync.update
 		l_sync.run
 
 		listen = Listen.to(@box.path, :ignore => /#{Box::AGE_F}|#{Box::STRUCT_F}/,
@@ -48,7 +49,7 @@ module SecBox
 		sleep
 	end
 
-	# TODO: support stop & pause
+	# TODO: handle stop & pause
 
 	def SecBox.box
 		@box
