@@ -37,12 +37,14 @@ module SecBox
 			return YAML::load(File.read(CONF_F))
 		end
 
-		attr_reader :box, :host, :port, :user, :keys, :log_level
+		attr_reader :box, :host, :port, :user, \
+			:keys, :log_level, :remote_delay
 
 		def initialize
-			# TODO wizard for brand new configuration
+			# TODO: wizard for brand new configuration
 			@port = 22
 			@log_level = "ERROR"
+			@remote_delay = 45
 		end
 	end
 end

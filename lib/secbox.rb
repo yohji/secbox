@@ -18,6 +18,7 @@
 #--
 
 require "logger"
+require "listen"
 require "secbox/box"
 require "secbox/conf"
 require "secbox/sync"
@@ -27,14 +28,27 @@ module SecBox
 
 	def SecBox.start
 		@conf = Conf.load
-		@log = Logger.new(Conf::LOG_F)
+		@log = Logger.new Conf::LOG_F
 		@log.level = @conf.log_level
 		@box = Box.new @conf.box
 
 		mutex = Mutex.new
-		sync = Sync.new mutex
-		sync.join
+		r_sync = RemoteSync.new mutex
+		r_sync.run
+		l_sync = LocalSync.new mutex
+		l_sync.run
+
+		listen = Listen.to(@box.path, :ignore => /#{Box::AGE_F}|#{Box::STRUCT_F}/,
+			:force_polling => false, :relative => false) do |modified, added, removed|
+			l_sync.changed.push modified unless modified.empty?
+			l_sync.changed.push added unless added.empty?
+			l_sync.removed.push removed unless removed.empty?
+		end
+		listen.start
+		sleep
 	end
+
+	# TODO: support stop & pause
 
 	def SecBox.box
 		@box

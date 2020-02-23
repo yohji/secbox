@@ -22,7 +22,7 @@ require "tempfile"
 require "secbox/ssh"
 
 module SecBox
-	class Sync < Thread
+	class RemoteSync < Thread
 
 		def initialize(mutex)
 			super(&method(:execute))
@@ -44,16 +44,14 @@ module SecBox
 
 					if r_time > l_time
 						unless ssh.exists? "#{@r_box}/#{Box::LOCK_F}"
-							mutex.synchronize do
+							@mutex.synchronize do
 								# TODO sync remote -> local
 							end
 						end
-					elsif l_time > r_time
-						# TODO sync local -> remote
 					end
 				end
 
-				break
+				sleep SecBox.conf.remote_delay
 			end
 		end
 
@@ -74,6 +72,35 @@ module SecBox
 			end
 
 			return true
+		end
+	end
+
+	class LocalSync < Thread
+
+		attr_reader :changed, :removed
+
+		def initialize(mutex)
+			super(&method(:execute))
+			@mutex = mutex
+			@changed = Array.new
+			@removed = Array.new
+		end
+
+		private
+
+		def execute
+			loop do
+				if ! (@changed.empty? & @removed.empty?)
+					@mutex.synchronize do
+						# TODO sync local - > remote
+						puts @changed.pop
+						puts @removed.pop
+					end
+				end
+
+				# OPTIMIZE: handle modification events
+				sleep 5
+			end
 		end
 	end
 end
