@@ -45,23 +45,23 @@ module SecBox
 
 			print "Box directory path []: "
 			@box = gets.chomp
-			raise "Box can not be blank." if @box.strip.empty?
+			raise "Box can not be blank." if @box.blank?
 			print "Remote hostname/IP []: "
 			@host = gets.chomp
-			raise "Remote can not be blank." if @host.strip.empty?
+			raise "Remote can not be blank." if @host.blank?
 			print "Remote UNIX username [secbox]: "
 			@user = gets.chomp
-			@user = "secbox" if @user.strip.empty?
+			@user = "secbox" if @user.blank?
 			print "Remote SSH port [22]: "
 			port = gets.chomp
-			(port.strip.empty?) ? @port = 22 : @port = Integer(port)
+			(port.blank?) ? @port = 22 : @port = Integer(port)
 			@keys = Array.new
 			print "Public key path [~/.ssh/id_rsa.pub]: "
 			key = gets.chomp
-			(key.strip.empty?) ? @keys.push(File.join(ENV["HOME"], ".ssh", "id_rsa.pub")) : @keys.push(key)
+			(key.blank?) ? @keys.push(File.join(ENV["HOME"], ".ssh", "id_rsa.pub")) : @keys.push(key)
 			print "Private key path [~/.ssh/id_rsa]: "
 			key = gets.chomp
-			(key.strip.empty?) ? @keys.push(File.join(ENV["HOME"], ".ssh", "id_rsa")) : @keys.push(key)
+			(key.blank?) ? @keys.push(File.join(ENV["HOME"], ".ssh", "id_rsa")) : @keys.push(key)
 
 			@log_level = "ERROR"
 			@remote_check = 45

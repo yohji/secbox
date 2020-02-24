@@ -22,88 +22,61 @@ require "tempfile"
 require "secbox/ssh"
 
 module SecBox
-	class RemoteSync < Thread
+	class Sync
 
-		def initialize(mutex)
-			super(&method(:sync))
-			@mutex = mutex
+		attr_reader :changed, :removed
+
+		def initialize
+			@changed = Array.new
+			@removed = Array.new
 		end
 
-		private
+		def setup
+			@r_box = "/home/#{SecBox.conf.user}/#{SecBox.box.name}"
+			@l_box = SecBox.conf.box
 
-		def sync
-			box = SecBox.box
-			setup = false
+			SSH.new do |ssh|
+				unless ssh.exists? "#{@r_box}"
+					ssh.mkdir "#{@r_box}"
 
+					Tempfile.create("secbox") do |tmp|
+						tmp.write Marshal.dump(Array.new)
+						tmp.flush
+						ssh.put tmp.path, "#{@r_box}/#{Box::STRUCT_F}"
+					end
+
+					ssh.invoke "echo 0 > #{@r_box}/#{Box::AGE_F}"
+					SecBox.log.info "Created remote box '#{SecBox.box.name}'"
+				end
+			end
+			return true
+		end
+
+		def update
+			# TODO: update local - > remote
+			return true
+		end
+
+		def run
 			loop do
-				SSH.new do |ssh|
-					setup = setup_box(ssh, box) unless setup
+				if ! (@changed.empty? && @removed.empty?)
+					# TODO: sync local - > remote
+					puts @changed.pop
+					puts @removed.pop
+				end
 
+				SSH.new do |ssh|
 					r_time = Integer(ssh.invoke "cat #{@r_box}/#{Box::AGE_F}")
-					l_time = Integer(File.read(File.join(box.path, Box::AGE_F)))
+					l_time = Integer(File.read(File.join(SecBox.box.path, Box::AGE_F)))
 
 					if r_time > l_time
 						unless ssh.exists? "#{@r_box}/#{Box::LOCK_F}"
-							@mutex.synchronize do
-								# TODO sync remote -> local
-							end
+							# TODO sync remote -> local
 						end
 					end
 				end
 
 				sleep SecBox.conf.remote_check
-			end
-		end
-
-		def setup_box ssh, box
-			@r_box = "/home/#{SecBox.conf.user}/#{box.name}"
-
-			unless ssh.exists? "#{@r_box}"
-				ssh.mkdir "#{@r_box}"
-
-				Tempfile.create("secbox") do |tmp|
-					tmp.write Marshal.dump(Array.new)
-					tmp.flush
-					ssh.put tmp.path, "#{@r_box}/#{Box::STRUCT_F}"
-				end
-
-				ssh.invoke "echo 0 > #{@r_box}/#{Box::AGE_F}"
-				SecBox.log.info "Created remote box '#{box.name}'"
-			end
-
-			return true
-		end
-	end
-
-	class LocalSync < Thread
-
-		attr_reader :changed, :removed
-
-		def initialize(mutex)
-			super(&method(:sync))
-			@mutex = mutex
-			@changed = Array.new
-			@removed = Array.new
-		end
-
-		def update
-			# TODO: update local - > remote
-		end
-
-		private
-
-		def sync
-			loop do
-				if ! (@changed.empty? && @removed.empty?)
-					@mutex.synchronize do
-						# TODO: sync local - > remote
-						puts @changed.pop
-						puts @removed.pop
-					end
-				end
-
-				# OPTIMIZE: handle modification events
-				sleep 5
 			end
 		end
 	end

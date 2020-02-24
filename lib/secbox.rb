@@ -17,6 +17,7 @@
 #--   or see <http://www.gnu.org/licenses/>
 #--
 
+require "rle"
 require "logger"
 require "listen"
 require "secbox/box"
@@ -33,21 +34,20 @@ module SecBox
 		@log.info "Starting SecBox :: version #{SecBox::VERSION}"
 		@box = Box.new @conf.box
 
-		mutex = Mutex.new
-		r_sync = RemoteSync.new mutex
-		r_sync.run
-		l_sync = LocalSync.new mutex
-		l_sync.update
-		l_sync.run
+		sync = Sync.new
+		sync.setup
+		sync.update
+		th = Thread.new { sync.run }
 
 		listen = Listen.to(@box.path, :ignore => /#{Box::AGE_F}|#{Box::STRUCT_F}/,
 			:force_polling => false, :relative => false) do |modified, added, removed|
-			l_sync.changed.push modified unless modified.empty?
-			l_sync.changed.push added unless added.empty?
-			l_sync.removed.push removed unless removed.empty?
+			sync.changed.push modified unless modified.empty?
+			sync.changed.push added unless added.empty?
+			sync.removed.push removed unless removed.empty?
 		end
 		listen.start
-		sleep
+
+		th.join
 	end
 
 	# TODO: handle stop & pause
