@@ -41,8 +41,28 @@ module SecBox
 			:keys, :log_level, :remote_check
 
 		def initialize
-			# TODO: wizard for brand new configuration
-			@port = 22
+			puts "Not yet configured. Please enter information below."
+
+			print "Box directory path []: "
+			@box = gets.chomp
+			raise "Box can not be blank." if @box.strip.empty?
+			print "Remote hostname/IP []: "
+			@host = gets.chomp
+			raise "Remote can not be blank." if @host.strip.empty?
+			print "Remote UNIX username [secbox]: "
+			@user = gets.chomp
+			@user = "secbox" if @user.strip.empty?
+			print "Remote SSH port [22]: "
+			port = gets.chomp
+			(port.strip.empty?) ? @port = 22 : @port = Integer(port)
+			@keys = Array.new
+			print "Public key path [~/.ssh/id_rsa.pub]: "
+			key = gets.chomp
+			(key.strip.empty?) ? @keys.push(File.join(ENV["HOME"], ".ssh", "id_rsa.pub")) : @keys.push(key)
+			print "Private key path [~/.ssh/id_rsa]: "
+			key = gets.chomp
+			(key.strip.empty?) ? @keys.push(File.join(ENV["HOME"], ".ssh", "id_rsa")) : @keys.push(key)
+
 			@log_level = "ERROR"
 			@remote_check = 45
 		end

@@ -30,6 +30,7 @@ module SecBox
 		@conf = Conf.load
 		@log = Logger.new Conf::LOG_F
 		@log.level = @conf.log_level
+		@log.info "Starting SecBox :: version #{SecBox::VERSION}"
 		@box = Box.new @conf.box
 
 		mutex = Mutex.new

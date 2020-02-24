@@ -24,7 +24,7 @@ module SecBox
 		STRUCT_F = ".struct"
 		LOCK_F = ".lock"
 
-		attr_reader :name, :path, :age, :struct
+		attr_reader :name, :path, :age, :struct, :size
 
 		def initialize path
 			@path = path
@@ -38,12 +38,13 @@ module SecBox
 
 		def refresh
 			@struct = Dir.glob("#{@path}/**/*")
+			@size = @struct.length
 			File.write(@struct_f, Marshal.dump(@struct))
 
 			@age = Time.new.to_i
 			File.write(@age_f, @age)
 
-			SecBox.log.info "Refresh local box at '#{@path}'"
+			SecBox.log.debug "Refresh box at '#{@path}': #{@size} entries."
 		end
 	end
 end
