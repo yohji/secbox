@@ -41,6 +41,7 @@ module SecBox
 
 		listen = Listen.to(@box.path, :ignore => /#{Box::AGE_F}|#{Box::STRUCT_F}/,
 			:force_polling => false, :relative => false) do |modified, added, removed|
+
 			sync.changed.push modified unless modified.empty?
 			sync.changed.push added unless added.empty?
 			sync.removed.push removed unless removed.empty?

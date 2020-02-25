@@ -17,6 +17,8 @@
 #--   or see <http://www.gnu.org/licenses/>
 #--
 
+require "digest"
+
 module SecBox
 	class Box
 
@@ -36,13 +38,21 @@ module SecBox
 			refresh
 		end
 
-		def refresh
+		def refresh(age = nil)
 			Dir.chdir "#{@path}"
-			@struct = Dir.glob "**/*"
-			@size = @struct.length
+			scan = Dir.glob "**/*"
+			@size = scan.length
+
+			@struct = Hash.new
+			unless scan.empty?
+				scan.each do |e|
+					hash = Digest::MD5.file(e).hexdigest unless File.directory? e
+					@struct[e] = [hash, File.ctime(e)]
+				end
+			end
 			File.write(@struct_f, Marshal.dump(@struct))
 
-			@age = Time.new.to_i
+			(age.nil?) ? @age = Time.new.to_i : @age = age
 			File.write(@age_f, @age)
 
 			SecBox.log.debug "Refresh box at '#{@path}': #{@size} entries."

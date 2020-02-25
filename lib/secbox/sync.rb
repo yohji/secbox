@@ -34,18 +34,21 @@ module SecBox
 		def setup
 			@r_box = "/home/#{SecBox.conf.user}/#{SecBox.box.name}"
 			@l_box = SecBox.conf.box
+			@r_struct = "#{@r_box}/#{Box::STRUCT_F}"
+			@r_age = "#{@r_box}/#{Box::AGE_F}"
+			@r_lock = "#{@r_box}/#{Box::LOCK_F}"
 
 			SSH.new do |ssh|
 				unless ssh.exists? "#{@r_box}"
 					ssh.mkdir "#{@r_box}"
 
 					Tempfile.create("secbox") do |tmp|
-						tmp.write Marshal.dump(Array.new)
+						tmp.write Marshal.dump(Hash.new)
 						tmp.flush
-						ssh.put tmp.path, "#{@r_box}/#{Box::STRUCT_F}"
+						ssh.put tmp.path, "#{@r_struct}"
 					end
 
-					ssh.invoke "echo 0 > #{@r_box}/#{Box::AGE_F}"
+					ssh.invoke "echo 0 > "
 					SecBox.log.info "Created remote box '#{SecBox.box.name}'"
 				end
 			end
@@ -53,28 +56,37 @@ module SecBox
 
 		def update
 			SSH.new do |ssh|
+				@l_struct = SecBox.box.struct
 				Tempfile.create("secbox") do |tmp|
-					ssh.get "#{@r_box}/#{Box::STRUCT_F}", tmp.path
-					r_struct = Marshal.load tmp.read
-					diff = SecBox.box.struct - r_struct
+					ssh.get "#{@r_struct}", tmp.path
+					@r_struct = Marshal.load tmp.read
+				end
 
-					# FIXME: manage modified files
+				unless @r_struct.eql? @l_struct
+					begin
+						r_touch = false
+						l_touch = false
+						ssh.touch "#{@r_lock}"
 
-					unless diff.empty?
-						begin
-							ssh.touch "#{@r_box}/#{Box::LOCK_F}"
-							diff.each do |file|
-								dir = File.dirname file
-								ssh.mkdir "#{@r_box}/#{dir}" unless r_struct.include? dir
-								ssh.put file, "#{@r_box}/#{dir}"
-								SecBox.log.debug "File uploaded to remote: '#{file}'"
+						@l_struct.each do |l_file, l_meta|
+							if @r_struct.include? l_file
+							else
+								dir = File.dirname l_file
+								ssh.mkdir "#{@r_box}/#{dir}" unless @r_struct.include? dir
+								ssh.put l_file, "#{@r_box}/#{dir}"
+								r_touch = true
+								SecBox.log.debug "File uploaded: '#{file}'"
 							end
-							ssh.put "#{@l_box}/#{Box::STRUCT_F}", "#{@r_box}/#{Box::STRUCT_F}"
-							ssh.invoke "echo #{SecBox.box.age} > #{@r_box}/#{Box::AGE_F}"
-						ensure
-							ssh.rm "#{@r_box}/#{Box::LOCK_F}"
-							SecBox.log.info "Remote box is been updated"
 						end
+
+						age = Integer(ssh.invoke "cat #{@r_age}") if l_touch && ! r_touch
+						SecBox.box.refresh age if l_touch
+						ssh.put "#{@l_box}/#{Box::STRUCT_F}", "#{@r_struct}" if r_touch
+						ssh.invoke "echo #{SecBox.box.age} > #{@r_age}" if r_touch
+
+						SecBox.log.info "Box is been updated"
+					ensure
+						ssh.rm "#{@r_lock}"
 					end
 				end
 			end
@@ -89,11 +101,11 @@ module SecBox
 				end
 
 				SSH.new do |ssh|
-					r_time = Integer(ssh.invoke "cat #{@r_box}/#{Box::AGE_F}")
+					r_time = Integer(ssh.invoke "cat #{@r_age}")
 					l_time = Integer(File.read(File.join(SecBox.box.path, Box::AGE_F)))
 
 					if r_time > l_time
-						unless ssh.exists? "#{@r_box}/#{Box::LOCK_F}"
+						unless ssh.exists? "#{@r_lock}"
 							# TODO sync remote -> local
 						end
 					end
