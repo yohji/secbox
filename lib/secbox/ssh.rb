@@ -54,6 +54,14 @@ module SecBox
 			@session.exec!("mkdir -p #{dir}").exitstatus.zero?
 		end
 
+		def rm file
+			@session.exec!("rm -f #{file}").exitstatus.zero?
+		end
+
+		def touch file
+			@session.exec!("touch #{file}").exitstatus.zero?
+		end
+
 		def put file, to
 			@session.scp.upload! file, to, \
 				:recursive => false, :preserve => true, :verbose => false

@@ -37,7 +37,8 @@ module SecBox
 		end
 
 		def refresh
-			@struct = Dir.glob("#{@path}/**/*")
+			Dir.chdir "#{@path}"
+			@struct = Dir.glob "**/*"
 			@size = @struct.length
 			File.write(@struct_f, Marshal.dump(@struct))
 

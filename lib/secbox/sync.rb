@@ -49,12 +49,35 @@ module SecBox
 					SecBox.log.info "Created remote box '#{SecBox.box.name}'"
 				end
 			end
-			return true
 		end
 
 		def update
-			# TODO: update local - > remote
-			return true
+			SSH.new do |ssh|
+				Tempfile.create("secbox") do |tmp|
+					ssh.get "#{@r_box}/#{Box::STRUCT_F}", tmp.path
+					r_struct = Marshal.load tmp.read
+					diff = SecBox.box.struct - r_struct
+
+					# FIXME: manage modified files
+
+					unless diff.empty?
+						begin
+							ssh.touch "#{@r_box}/#{Box::LOCK_F}"
+							diff.each do |file|
+								dir = File.dirname file
+								ssh.mkdir "#{@r_box}/#{dir}" unless r_struct.include? dir
+								ssh.put file, "#{@r_box}/#{dir}"
+								SecBox.log.debug "File uploaded to remote: '#{file}'"
+							end
+							ssh.put "#{@l_box}/#{Box::STRUCT_F}", "#{@r_box}/#{Box::STRUCT_F}"
+							ssh.invoke "echo #{SecBox.box.age} > #{@r_box}/#{Box::AGE_F}"
+						ensure
+							ssh.rm "#{@r_box}/#{Box::LOCK_F}"
+							SecBox.log.info "Remote box is been updated"
+						end
+					end
+				end
+			end
 		end
 
 		def run
