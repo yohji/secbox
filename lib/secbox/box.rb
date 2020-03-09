@@ -26,7 +26,7 @@ module SecBox
 		STRUCT_F = ".struct"
 		LOCK_F = ".lock"
 
-		attr_reader :name, :path, :age, :struct, :size
+		attr_reader :name, :path, :age, :struct
 
 		def initialize path
 			@path = path
@@ -35,27 +35,40 @@ module SecBox
 			@struct_f = File.join(path, STRUCT_F)
 
 			FileUtils.mkdir_p path unless File.exists? path
+			@struct = (File.exists? @struct_f) ? Marshal.load(@struct_f) : Struct.new
+			@age = (File.exist? @age_f) ? Integer(File.read(@age_f)) : Time.new.to_i
+
 			refresh
 		end
 
-		def refresh(age = nil)
+		def refresh
+			touch = false
 			Dir.chdir "#{@path}"
-			scan = Dir.glob "**/*"
-			@size = scan.length
-
-			@struct = Hash.new
-			unless scan.empty?
-				scan.each do |e|
-					hash = Digest::MD5.file(e).hexdigest unless File.directory? e
-					@struct[e] = [hash, File.ctime(e)]
+			Dir.glob("**/*").each do |e|
+				hash = Digest::SHA256.file(e).hexdigest unless File.directory? e
+				if @struct.tree.include? e
+					
+				else
+					@struct.tree[e] = [hash, File.ctime(e)]
 				end
 			end
-			File.write(@struct_f, Marshal.dump(@struct))
 
-			(age.nil?) ? @age = Time.new.to_i : @age = age
-			File.write(@age_f, @age)
+			if touch
+				File.write(@struct_f, Marshal.dump(@struct))
+				File.write(@age_f, (@age = Time.new.to_i))
+			end
 
 			SecBox.log.debug "Refresh box at '#{@path}': #{@size} entries."
+		end
+	end
+
+	class Struct
+		attr_reader :tree, :trash, :version
+
+		def initialize
+			@version = 1
+			@tree = Hash.new
+			@trash = Array.new
 		end
 	end
 end

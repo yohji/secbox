@@ -34,11 +34,6 @@ module SecBox
 		@log.info "Starting SecBox :: version #{SecBox::VERSION}"
 		@box = Box.new @conf.box
 
-		sync = Sync.new
-		sync.setup
-		sync.update
-		th = Thread.new { sync.run }
-
 		listen = Listen.to(@box.path, :ignore => /#{Box::AGE_F}|#{Box::STRUCT_F}/,
 			:force_polling => false, :relative => false) do |modified, added, removed|
 
@@ -48,6 +43,12 @@ module SecBox
 		end
 		listen.start
 
+		sync = Sync.new
+		sync.setup
+		sync.update
+
+		th = Thread.new { sync.run }
+		th.abort_on_exception = true
 		th.join
 	end
 

@@ -80,7 +80,7 @@ module SecBox
 						end
 
 						age = Integer(ssh.invoke "cat #{@r_age}") if l_touch && ! r_touch
-						SecBox.box.refresh age if l_touch
+						SecBox.box.refresh if l_touch
 						ssh.put "#{@l_box}/#{Box::STRUCT_F}", "#{@r_struct}" if r_touch
 						ssh.invoke "echo #{SecBox.box.age} > #{@r_age}" if r_touch
 
